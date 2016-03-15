@@ -7,8 +7,6 @@ using files you can send around on a USB stick
 
 # example
 
-
-
 ``` js
 var replicate = require('hyperlog-sneakernet-replicator')
 var level = require('level')

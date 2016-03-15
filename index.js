@@ -1,4 +1,5 @@
 var hyperlog = require('hyperlog')
+var level = require('level')
 var tar = require('tar')
 var fstream = require('fstream')
 var fs = require('fs')
@@ -10,17 +11,22 @@ var gzip = require('zlib').createGzip
 var gunzip = require('zlib').createGunzip
 var pump = require('pump')
 
-module.exports = function (log, opts, outfile, cb) {
+module.exports = function (log, opts, outfile, cb_) {
   if (typeof opts === 'string') {
     cb = outfile
     outfile = opts
     opts = {}
   }
   if (!outfile) outfile = opts.file
-  cb = once(cb || noop)
+  var xcb = cb_ || noop
+  cb = once(function () {
+    if (dstdb) dstdb.close()
+    xcb.apply(this, arguments)
+  })
 
   var tmpfile = path.join(tmpdir, 'sneakernet-' + Math.random())
   var tgzfile = tmpfile + '.tgz'
+  var dstdb = level(tmpfile)
 
   fs.stat(outfile, function (err, stat) {
     if (stat) {
@@ -28,7 +34,7 @@ module.exports = function (log, opts, outfile, cb) {
       var unpack = tar.Extract({ path: tmpfile })
       pump(r, gunzip(), unpack)
         .once('error', cb)
-        .on('end', function (err) {
+        .once('end', function (err) {
           if (err) cb(err)
           else replicate()
         })
@@ -36,7 +42,7 @@ module.exports = function (log, opts, outfile, cb) {
   })
 
   function replicate () {
-    var dstlog = hyperlog(tmpfile, { valueEncoding: log.valueEncoding })
+    var dstlog = hyperlog(dstdb, { valueEncoding: log.valueEncoding })
     var dr = dstlog.replicate()
     var lr = log.replicate()
     var pending = 2
