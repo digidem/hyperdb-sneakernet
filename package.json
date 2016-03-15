@@ -1,0 +1,30 @@
+{
+  "name": "hyperlog-sneakernet-replicator",
+  "version": "1.0.0",
+  "description": "peer to peer replication for hyperlog using files you can send around on a USB stick",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "keywords": [
+    "hyperlog",
+    "usb",
+    "sneakernet",
+    "replication",
+    "sync"
+  ],
+  "author": "substack",
+  "license": "BSD",
+  "dependencies": {
+    "end-of-stream": "^1.1.0",
+    "fstream": "^1.0.8",
+    "hyperlog": "^4.8.0",
+    "level": "^1.4.0",
+    "once": "^1.3.3",
+    "pump": "^1.0.1",
+    "tar": "^2.2.1"
+  },
+  "devDependencies": {
+    "tape": "^4.5.1"
+  }
+}
