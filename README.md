@@ -20,6 +20,7 @@ it.
 
 [hyperlog]: https://npmjs.com/package/hyperlog
 [level]: https://npmjs.com/package/level
+[leveldown]: https://npmjs.com/package/leveldown
 
 ## example
 
