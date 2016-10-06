@@ -1,6 +1,6 @@
 {
   "name": "hyperlog-sneakernet-replicator",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "peer to peer replication for hyperlog using files you can send around on a USB stick",
   "main": "index.js",
   "scripts": {
