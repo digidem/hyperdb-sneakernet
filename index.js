@@ -10,34 +10,34 @@ var gzip = require('zlib').createGzip
 var gunzip = require('zlib').createGunzip
 var pump = require('pump')
 
-module.exports = function (log, opts, outfile, cb_) {
+module.exports = function (log, opts, outFile, cb_) {
   if (typeof opts === 'string') {
-    cb_ = outfile
-    outfile = opts
+    cb_ = outFile
+    outFile = opts
     opts = {}
   }
-  if (!outfile) outfile = opts.file
+  if (!outFile) outFile = opts.file
   var xcb = cb_ || noop
   cb = once(function () {
     if (dstdb) dstdb.close()
     xcb.apply(this, arguments)
   })
 
-  var tmpfile = path.join(tmpdir, 'sneakernet-' + Math.random())
-  var tgzfile = tmpfile + '.tgz'
-  var dstdb = level(tmpfile)
+  var tmpFile = path.join(tmpdir, 'sneakernet-' + Math.random())
+  var tgzFile = tmpFile + '.tgz'
+  var dstdb = level(tmpFile)
 
   var pending = 2
 
-  fs.stat(outfile, function (err, stat) {
+  fs.stat(outFile, function (err, stat) {
     if (err && err.code !== 'ENOENT') {
       return cb(err)
     }
     if (stat) {
       pump(
-        fs.createReadStream(outfile),
+        fs.createReadStream(outFile),
         gunzip(),
-        tar.extract(tmpfile),
+        tar.extract(tmpFile),
         function (err) {
           if (err) return cb(err)
           replicate()
@@ -61,9 +61,9 @@ module.exports = function (log, opts, outfile, cb_) {
     if (--pending !== 0) return
 
     pump(
-      tar.pack(tmpfile),
+      tar.pack(tmpFile),
       gzip(),
-      fs.createWriteStream(tgzfile),
+      fs.createWriteStream(tgzFile),
       function (err) {
         if (err) return cb(err)
         rename()
@@ -71,7 +71,7 @@ module.exports = function (log, opts, outfile, cb_) {
   }
 
   function rename () {
-    fs.rename(tgzfile, outfile, cb)
+    fs.rename(tgzFile, outFile, cb)
   }
 }
 
