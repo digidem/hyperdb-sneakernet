@@ -9,6 +9,7 @@ var once = require('once')
 var gzip = require('zlib').createGzip
 var gunzip = require('zlib').createGunzip
 var pump = require('pump')
+var ncp = require('ncp')
 
 module.exports = function (log, opts, outFile, cb_) {
   if (typeof opts === 'string') {
@@ -71,7 +72,21 @@ module.exports = function (log, opts, outFile, cb_) {
   }
 
   function rename () {
-    fs.rename(tgzFile, outFile, cb)
+    if (opts.safetyFile) {
+      var tmpRemoteFile = outFile + (''+Math.random()).substring(2, 7)
+      // Copy the final file from local to the media
+      ncp(tgzFile, tmpRemoteFile, function (err) {
+        if (err) return cb(err)
+        // Copy the temp media file onto the proper media file
+        ncp(tmpRemoteFile, outFile, function (err) {
+          if (err) return cb(err)
+          // Delete the old media temp file
+          fs.unlink(tmpRemoteFile, cb)
+        })
+      })
+    } else {
+      fs.rename(tgzFile, outFile, cb)
+    }
   }
 }
 
