@@ -28,6 +28,8 @@ module.exports = function (log, opts, outfile, cb_) {
   var tgzfile = tmpfile + '.tgz'
   var dstdb = level(tmpfile)
 
+  var pending = 2
+
   fs.stat(outfile, function (err, stat) {
     if (stat) {
       var r = fs.createReadStream(outfile)
@@ -45,7 +47,6 @@ module.exports = function (log, opts, outfile, cb_) {
     var dstlog = hyperlog(dstdb, { valueEncoding: log.valueEncoding })
     var dr = dstlog.replicate()
     var lr = log.replicate()
-    var pending = 2
     onend(dr, done)
     onend(lr, done)
     dr.pipe(lr).pipe(dr)
