@@ -13,7 +13,7 @@ var pump = require('pump')
 
 module.exports = function (log, opts, outfile, cb_) {
   if (typeof opts === 'string') {
-    cb = outfile
+    cb_ = outfile
     outfile = opts
     opts = {}
   }
