@@ -1,7 +1,6 @@
 var hyperlog = require('hyperlog')
 var level = require('level')
-var tar = require('tar')
-var fstream = require('fstream')
+var tar = require('tar-fs')
 var fs = require('fs')
 var path = require('path')
 var tmpdir = require('os').tmpdir()
@@ -32,13 +31,13 @@ module.exports = function (log, opts, outfile, cb_) {
 
   fs.stat(outfile, function (err, stat) {
     if (stat) {
-      var r = fs.createReadStream(outfile)
-      var unpack = tar.Extract({ path: tmpfile })
-      pump(r, gunzip(), unpack)
-        .once('error', cb)
-        .once('end', function (err) {
-          if (err) cb(err)
-          else replicate()
+      pump(
+        fs.createReadStream(outfile),
+        gunzip(),
+        tar.extract(tmpfile),
+        function (err) {
+          if (err) return cb(err)
+          replicate()
         })
     } else replicate()
   })
@@ -54,12 +53,17 @@ module.exports = function (log, opts, outfile, cb_) {
 
   function done () {
     if (--pending !== 0) return
-    var pack = tar.Pack()
-    var r = fstream.Reader({ path: tmpfile, type: 'Directory' })
-    pump(r, pack, gzip(), fs.createWriteStream(tgzfile))
-      .once('error', cb)
-      .once('end', rename)
+
+    pump(
+      tar.pack(tmpfile),
+      gzip(),
+      fs.createWriteStream(tgzfile),
+      function (err) {
+        if (err) return cb(err)
+        rename()
+      })
   }
+
   function rename () {
     fs.rename(tgzfile, outfile, cb)
   }
