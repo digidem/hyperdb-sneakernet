@@ -30,6 +30,9 @@ module.exports = function (log, opts, outfile, cb_) {
   var pending = 2
 
   fs.stat(outfile, function (err, stat) {
+    if (err && err.code !== 'ENOENT') {
+      return cb(err)
+    }
     if (stat) {
       pump(
         fs.createReadStream(outfile),
@@ -46,12 +49,15 @@ module.exports = function (log, opts, outfile, cb_) {
     var dstlog = hyperlog(dstdb, { valueEncoding: log.valueEncoding })
     var dr = dstlog.replicate()
     var lr = log.replicate()
-    onend(dr, done)
-    onend(lr, done)
+    onend(dr, doneReplication)
+    onend(lr, doneReplication)
     dr.pipe(lr).pipe(dr)
   }
 
-  function done () {
+  function doneReplication (err) {
+    if (err) {
+      return cb(err)
+    }
     if (--pending !== 0) return
 
     pump(
