@@ -6,6 +6,14 @@ var tmp = require('tmp').dir
 var path = require('path')
 var fs = require('fs')
 
+function emptyFixture (done) {
+  var log = null
+  tmp(function (err, dir) {
+    log = hyperlog(level(dir))
+    done(err, log)
+  })
+}
+
 function fixture (done) {
   var log = null
   tmp(function (err, dir) {
@@ -50,8 +58,9 @@ test('fresh tarball', function (t) {
 })
 
 test('existing tarball', function (t) {
-  t.plan(9)
+  t.plan(7)
 
+  // create a fixture /w test data and write it
   fixture(function (err, log) {
     t.notOk(err)
 
@@ -63,33 +72,30 @@ test('existing tarball', function (t) {
         t.notOk(err)
         t.ok(fs.existsSync(tgz))
 
-        // add a new entry to main log
-        log.add(null, '!!!', function (err, node) {
-          t.notOk(err)
-
-          // replicate again
-          replicate(log, tgz, function (err) {
-            t.notOk(err)
-
-            var idx = 0
-            log.createReadStream()
-              .on('data', function (node) {
-                if (idx === 0) {
-                  t.equal(node.value.toString(), 'hello')
-                  idx++
-                } else if (idx === 1) {
-                  t.equal(node.value.toString(), 'world')
-                  idx++
-                } else if (idx === 2) {
-                  t.equal(node.value.toString(), '!!!')
-                  idx++
-                }
-              })
-          })
-        })
+        run(tgz)
       })
     })
   })
+
+  function run (tgz) {
+    emptyFixture(function (err, log) {
+      t.notOk(err)
+
+      replicate(log, tgz, function (err) {
+        var idx = 0
+        log.createReadStream()
+          .on('data', function (node) {
+            if (idx === 0) {
+              t.equal(node.value.toString(), 'hello')
+              idx++
+            } else if (idx === 1) {
+              t.equal(node.value.toString(), 'world')
+              idx++
+            }
+          })
+      })
+    })
+  }
 })
 
 test('safe write', function (t) {
@@ -100,7 +106,7 @@ test('safe write', function (t) {
 
     tmp(function (err, dir) {
       var tgz = path.join(dir, 'db.tar.gz')
-      console.log('path', tgz)
+      // console.log('path', tgz)
       t.notOk(fs.existsSync(tgz))
 
       replicate(log, { safetyFile: true }, tgz, function (err) {

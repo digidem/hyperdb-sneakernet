@@ -26,7 +26,7 @@ module.exports = function (log, opts, outFile, cb_) {
 
   var tmpFile = path.join(tmpdir, 'sneakernet-' + Math.random())
   var tgzFile = tmpFile + '.tgz'
-  var dstdb = level(tmpFile)
+  var dstdb = null
 
   var pending = 2
 
@@ -47,6 +47,7 @@ module.exports = function (log, opts, outFile, cb_) {
   })
 
   function replicate () {
+    dstdb = level(tmpFile)
     var dstlog = hyperlog(dstdb, { valueEncoding: log.valueEncoding })
     var dr = dstlog.replicate()
     var lr = log.replicate()
