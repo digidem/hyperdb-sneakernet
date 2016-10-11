@@ -10,6 +10,7 @@ var gzip = require('zlib').createGzip
 var gunzip = require('zlib').createGunzip
 var pump = require('pump')
 var ncp = require('ncp')
+var mv = require('mv')
 
 module.exports = function (log, opts, outFile, cb_) {
   if (typeof opts === 'string') {
@@ -86,7 +87,7 @@ module.exports = function (log, opts, outFile, cb_) {
         })
       })
     } else {
-      fs.rename(tgzFile, outFile, cb)
+      mv(tgzFile, outFile, cb)
     }
   }
 }
