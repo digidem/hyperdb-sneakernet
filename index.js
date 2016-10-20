@@ -63,14 +63,16 @@ module.exports = function (log, opts, outFile, cb_) {
     }
     if (--pending !== 0) return
 
-    pump(
-      tar.pack(tmpFile),
-      gzip(),
-      fs.createWriteStream(tgzFile),
-      function (err) {
-        if (err) return cb(err)
-        rename()
-      })
+    dstdb.close(function () {
+      pump(
+        tar.pack(tmpFile),
+        gzip(),
+        fs.createWriteStream(tgzFile),
+        function (err) {
+          if (err) return cb(err)
+          rename()
+        })
+    })
   }
 
   function rename () {
