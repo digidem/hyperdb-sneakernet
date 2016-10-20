@@ -9,8 +9,6 @@ var once = require('once')
 var gzip = require('zlib').createGzip
 var gunzip = require('zlib').createGunzip
 var pump = require('pump')
-var ncp = require('ncp')
-var mv = require('mv')
 
 module.exports = function (log, opts, outFile, cb_) {
   if (typeof opts === 'string') {
@@ -28,6 +26,7 @@ module.exports = function (log, opts, outFile, cb_) {
   var tmpFile = path.join(tmpdir, 'sneakernet-' + Math.random())
   var tgzFile = tmpFile + '.tgz'
   var dstdb = null
+  var existing = false
 
   var pending = 2
 
@@ -36,6 +35,7 @@ module.exports = function (log, opts, outFile, cb_) {
       return cb(err)
     }
     if (stat) {
+      existing = true
       pump(
         fs.createReadStream(outFile),
         gunzip(),
@@ -76,22 +76,29 @@ module.exports = function (log, opts, outFile, cb_) {
   }
 
   function rename () {
-    if (opts.safetyFile) {
-      var tmpRemoteFile = outFile + (''+Math.random()).substring(2, 7)
-      // Copy the final file from local to the media
-      ncp(tgzFile, tmpRemoteFile, function (err) {
+    if (!existing) {
+      copyFileToMedia()
+    } else if (!opts.safetyFile) {
+      fs.unlink(outFile, copyFileToMedia)
+    } else {
+      var tmpRemoteFile = outFile + ('' + Math.random()).substring(2, 7)
+      fs.rename(outFile, tmpRemoteFile, function (err) {
         if (err) return cb(err)
-        // Copy the temp media file onto the proper media file
-        ncp(tmpRemoteFile, outFile, function (err) {
+        cp(tgzFile, outFile, function (err) {
           if (err) return cb(err)
-          // Delete the old media temp file
           fs.unlink(tmpRemoteFile, cb)
         })
       })
-    } else {
-      mv(tgzFile, outFile, cb)
+    }
+    function copyFileToMedia (err) {
+      if (err) return cb(err)
+      cp(tgzFile, outFile, cb)
     }
   }
 }
 
 function noop () {}
+
+function cp (src, dst, cb) {
+  pump(fs.createReadStream(src), fs.createWriteStream(dst), cb)
+}
