@@ -9,6 +9,7 @@ var once = require('once')
 var gzip = require('zlib').createGzip
 var gunzip = require('zlib').createGunzip
 var pump = require('pump')
+var debug = require('debug')('hyperlog-sneakernet')
 
 module.exports = function (log, opts, outFile, cb_) {
   if (typeof opts === 'string') {
@@ -18,7 +19,8 @@ module.exports = function (log, opts, outFile, cb_) {
   }
   if (!outFile) outFile = opts.file
   var xcb = cb_ || noop
-  cb = once(function () {
+  var cb = once(function (err) {
+    if (err) debug(err)
     if (dstdb) dstdb.close()
     xcb.apply(this, arguments)
   })
@@ -79,19 +81,24 @@ module.exports = function (log, opts, outFile, cb_) {
     if (!existing) {
       copyFileToMedia()
     } else if (!opts.safetyFile) {
+      debug('deleting existing file')
       fs.unlink(outFile, copyFileToMedia)
     } else {
+      debug('renaming existing file')
       var tmpRemoteFile = outFile + ('' + Math.random()).substring(2, 7)
       fs.rename(outFile, tmpRemoteFile, function (err) {
         if (err) return cb(err)
+        debug('copying new file to media')
         cp(tgzFile, outFile, function (err) {
           if (err) return cb(err)
+          debug('deleting previous file')
           fs.unlink(tmpRemoteFile, cb)
         })
       })
     }
     function copyFileToMedia (err) {
       if (err) return cb(err)
+      debug('copying new file to media')
       cp(tgzFile, outFile, cb)
     }
   }
