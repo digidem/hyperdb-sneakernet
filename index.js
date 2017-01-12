@@ -41,7 +41,11 @@ module.exports = function (log, opts, outFile, cb_) {
       pump(
         fs.createReadStream(outFile),
         gunzip(),
-        tar.extract(tmpFile),
+        tar.extract(tmpFile, {
+          // all dirs and files should be readable + writable
+          readable: true,
+          writable: true
+        }),
         function (err) {
           if (err) return cb(err)
           replicate()
@@ -67,7 +71,11 @@ module.exports = function (log, opts, outFile, cb_) {
 
     dstdb.close(function () {
       pump(
-        tar.pack(tmpFile),
+        tar.pack(tmpFile, {
+          // all dirs and files should be readable + writable
+          readable: true,
+          writable: true
+        }),
         gzip(),
         fs.createWriteStream(tgzFile),
         function (err) {
