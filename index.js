@@ -74,7 +74,9 @@ module.exports = function (log, opts, outFile, cb_) {
         tar.pack(tmpFile, {
           // all dirs and files should be readable + writable
           readable: true,
-          writable: true
+          writable: true,
+          // dereference symlinks (pack the contents of the symlink instead of the link itself)
+          dereference: true
         }),
         gzip(),
         fs.createWriteStream(tgzFile),
