@@ -1,5 +1,4 @@
-var hyperlog = require('hyperlog')
-var level = require('level')
+var hyperdb = require('hyperdb')
 var tar = require('tar-fs')
 var fs = require('graceful-fs')
 var path = require('path')
@@ -9,9 +8,9 @@ var once = require('once')
 var gzip = require('zlib').createGzip
 var gunzip = require('zlib').createGunzip
 var pump = require('pump')
-var debug = require('debug')('hyperlog-sneakernet')
+var debug = require('debug')('hyperdb-sneakernet')
 
-module.exports = function (log, opts, outFile, cb_) {
+module.exports = function (db, opts, outFile, cb_) {
   if (typeof opts === 'string') {
     cb_ = outFile
     outFile = opts
@@ -54,10 +53,9 @@ module.exports = function (log, opts, outFile, cb_) {
   })
 
   function replicate () {
-    dstdb = level(tmpFile)
-    var dstlog = hyperlog(dstdb, { valueEncoding: log.valueEncoding })
-    var dr = dstlog.replicate()
-    var lr = log.replicate()
+    var dst = hyperdb(tmpFile, db.key, { valueEncoding: db.valueEncoding })
+    var dr = dst.replicate()
+    var lr = db.replicate()
     onend(dr, doneReplication)
     onend(lr, doneReplication)
     dr.pipe(lr).pipe(dr)
@@ -69,7 +67,7 @@ module.exports = function (log, opts, outFile, cb_) {
     }
     if (--pending !== 0) return
 
-    dstdb.close(function () {
+    // dstdb.close(function () {
       pump(
         tar.pack(tmpFile, {
           // all dirs and files should be readable + writable
@@ -84,7 +82,7 @@ module.exports = function (log, opts, outFile, cb_) {
           if (err) return cb(err)
           rename()
         })
-    })
+    // })
   }
 
   function rename () {
