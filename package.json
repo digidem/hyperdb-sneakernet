@@ -1,20 +1,20 @@
 {
-  "name": "hyperlog-sneakernet-replicator",
+  "name": "hyperdb-sneakernet-replicator",
   "version": "1.1.5",
-  "description": "peer to peer replication for hyperlog using files you can send around on a USB stick",
+  "description": "peer to peer replication for hyperdb using files you can send around on a USB stick",
   "main": "index.js",
   "scripts": {
     "test": "tape test/*.js"
   },
   "keywords": [
-    "hyperlog",
+    "hyperdb",
     "usb",
     "sneakernet",
     "replication",
     "sync"
   ],
-  "author": "substack",
-  "license": "BSD",
+  "authors": ["substack", "noffle"],
+  "license": "ISC",
   "dependencies": {
     "debug": "^2.2.0",
     "end-of-stream": "^1.1.0",
