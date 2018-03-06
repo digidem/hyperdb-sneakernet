@@ -1,4 +1,4 @@
-# hyperdb-sneakernet-replicator
+# hyperdb-sneakernet
 
 > Peer to peer replication for a [hyperdb][] using files you can send around on
 > a USB stick
@@ -9,7 +9,7 @@ many different files to the filesystem in order to function.
 However, USB sticks have different write properties than what you'd find in a
 laptop, and can be pulled from the system at any time.
 
-`hyperdb-sneakernet-replicator` stores the entire hyperdb as a single `tar.gz`
+`hyperdb-sneakernet` stores the entire hyperdb as a single `tar.gz`
 file, using a temp directory on the local FS to perform the actual replication
 with a hyperdb.
 
@@ -22,7 +22,7 @@ it.
 ## Example
 
 ``` js
-var replicate = require('hyperdb-sneakernet-replicator')
+var replicate = require('hyperdb-sneakernet')
 var hyperdb = require('hyperdb')
 
 var db = hyperdb('log.db', { valueEncoding: 'json' })
@@ -33,7 +33,7 @@ replicate(db, '/media/usb/log.tgz')
 ## API
 
 ```js
-var replicate = require('hyperdb-sneakernet-replicator')
+var replicate = require('hyperdb-sneakernet')
 ```
 
 ### replicate(log, [opts={}], outFile, cb)
@@ -54,7 +54,7 @@ the real `outFile`.
 With [npm](https://npmjs.org/) installed, run
 
 ```
-$ npm install hyperdb-sneakernet-replicator
+$ npm install hyperdb-sneakernet
 ```
 
 ## License
