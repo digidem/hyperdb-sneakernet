@@ -1,6 +1,6 @@
 {
   "name": "hyperdb-sneakernet",
-  "version": "1.1.5",
+  "version": "2.0.0",
   "description": "Peer to peer replication for hyperdb using files you can send around on a USB stick.",
   "main": "index.js",
   "scripts": {
@@ -13,7 +13,10 @@
     "replication",
     "sync"
   ],
-  "authors": ["substack", "noffle"],
+  "authors": [
+    "substack",
+    "noffle"
+  ],
   "license": "ISC",
   "dependencies": {
     "debug": "^2.2.0",
