@@ -1,23 +1,15 @@
 # hyperdb-sneakernet
 
-> Peer to peer replication for a [hyperdb][] using files you can send around on
-> a USB stick
+> Peer to peer replication for a [hyperdb][] you can send around on a USB stick.
 
-Default hyperdb replication uses a hierarchy of folders, and it reads/writes
-many different files to the filesystem in order to function.
+`hyperdb-sneakernet` stores a live hyperdb copy on a USB stick suitable for
+replicating with existing hyperdb writers and also for authorizing new writers.
 
-However, USB sticks have different write properties than what you'd find in a
-laptop, and can be pulled from the system at any time.
+[hyperdb]: https://github.com/mafintosh/hyperdb
 
-`hyperdb-sneakernet` stores the entire hyperdb as a single `tar.gz`
-file, using a temp directory on the local FS to perform the actual replication
-with a hyperdb.
+## Status
 
-For further safety, `opts.safetyFile` can be set to `true` to only clobber the
-previous gzipped tarball once the new one has been copied to the media alongside
-it.
-
-[hyperdb]: https://npmjs.com/package/hyperdb
+wip mad science; don't use for anything meaningful yet.
 
 ## Example
 
@@ -27,7 +19,7 @@ var hyperdb = require('hyperdb')
 
 var db = hyperdb('log.db', { valueEncoding: 'json' })
 
-replicate(db, '/media/usb/log.tgz')
+replicate(db, '/media/usb/log.db')
 ```
 
 ## API
@@ -36,18 +28,18 @@ replicate(db, '/media/usb/log.tgz')
 var replicate = require('hyperdb-sneakernet')
 ```
 
-### replicate(log, [opts={}], outFile, cb)
+### replicate(db, [opts={}], dir, cb)
 
-Performs replication between the hyperdb `log` and the `tar.gz` file located at
-`outFile`. If no file exists at `outFile` then a brand new hyperdb database
-will be created there and replicated to.
+Performs replication between the hyperdb `db` and the directory located at
+`dir`. If no diectory exists at `dir` then a brand new hyperdb database will be
+created there and replicated to.
 
 `cb` is a callback function of the form `function (err) {}`, and is called upon
 an error, or completion.
 
-`opts` is optional. If `opts.safetyFile` is set, the final `tar.gz` output will
-be written to the media as e.g. `log.tgz-123895141` in full before clobbering
-the real `outFile`.
+`opts` is optional. If `opts.autoAuthorize` is set and the local hyperdb is not
+yet authorized, this will have the remote hyperdb (the one on the usb drive)
+authorize the local hyperdb before replicating.
 
 ## Install
 
