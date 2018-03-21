@@ -152,53 +152,48 @@ test('existing local; fresh remote', function (t) {
   })
 })
 
-/*
-
+// this case wouldn't really happen in practice
 test('fresh local; existing remote', function (t) {
   t.plan(7)
 
-  // create a fixture /w test data and write it
-  fixture(function (err, db) {
+  emptyFixture(function (err, db0, dir0, cleanup0) {
     t.notOk(err)
+    emptyFixture(db0.key, function (err, db1, dir1, cleanup1) {
+      t.notOk(err)
+      // replicate(db0, db1, function (err) {
+        // t.notOk(err)
+        populate()
+      // })
 
-    tmp(function (err, dir) {
-      var tgz = path.join(dir, 'db.tar.gz')
-      t.notOk(fs.existsSync(tgz))
+      function populate () {
+        db0.put('foo', 'bar', function (err) {
+          t.notOk(err)
+          db1.put('bax', 'quux', function (err) {
+            t.notOk(err)
+            sneaker(db0, dir1, function (err) {
+              t.notOk(err)
+              check()
+            })
+          })
+        })
+      }
 
-      sneaker(db, tgz, function (err) {
-        t.notOk(err)
-        t.ok(fs.existsSync(tgz))
+      function check () {
+        getContent(db0, function (err, res) {
+          t.notOk(err)
+          t.deepEquals(res, [
+            { key: 'foo', value: 'bar' },
+            { key: '', value: null },
+            { key: 'bax', value: 'quux' }
+          ])
 
-        run(db, tgz)
-      })
+          cleanup0()
+          cleanup1()
+        })
+      }
     })
   })
-
-  function run (origDb, tgz) {
-    emptyFixture(origDb.key, function (err, db) {
-      t.notOk(err)
-
-      sneaker(db, tgz, function (err) {
-        var idx = 0
-        db.createHistoryStream()
-          .on('data', function (node) {
-            if (idx === 0) {
-              t.equal(node.value.toString(), 'world')
-              idx++
-            } else if (idx === 1) {
-              t.equal(node.value.toString(), 'warld')
-              idx++
-            }
-          })
-      })
-    })
-  }
 })
-
-// TODO: existing local; existing remote
-// ...
-
-*/
 
 // HyperDB, HyperDB => Error
 function replicate (local, remote, cb) {
