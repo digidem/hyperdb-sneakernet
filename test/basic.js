@@ -23,9 +23,9 @@ function emptyFixture (key, done) {
 
 function fixture (done) {
   emptyFixture(function (err, db, dir, cleanup) {
-    db.put('/hello', 'world', function(err, node) {
+    db.put('hello', 'world', function(err, node) {
       if (err) return done(err)
-      db.put('/hello', 'there', function(err, node) {
+      db.put('hello', 'there', function(err, node) {
         if (err) return done(err)
         done(err, db, dir, cleanup)
       })
@@ -49,8 +49,7 @@ test('different shared keys', function (t) {
   })
 })
 
-// TODO: stop skipping this once https://github.com/mafintosh/hyperdb/issues/77 is fixed
-test.skip('neither db authorized to write', function (t) {
+test('neither db authorized to write', function (t) {
   emptyFixture(function (err, db0, dir0, cleanup0) {
     t.notOk(err)
     emptyFixture(db0.key, function (err, db1, dir1, cleanup0) {
@@ -70,7 +69,7 @@ test.skip('neither db authorized to write', function (t) {
 })
 
 test('existing local; existing remote', function (t) {
-  var cb0, cb1
+  t.plan(9)
 
   emptyFixture(function (err, db0, dir0, cleanup0) {
     t.notOk(err)
@@ -86,9 +85,9 @@ test('existing local; existing remote', function (t) {
       })
 
       function populate () {
-        db0.put('/foo', 'bar', function (err) {
+        db0.put('foo', 'bar', function (err) {
           t.notOk(err)
-          db1.put('/bax', 'quux', function (err) {
+          db1.put('bax', 'quux', function (err) {
             t.notOk(err)
             sneaker(db0, dir1, function (err) {
               t.notOk(err)
@@ -102,9 +101,48 @@ test('existing local; existing remote', function (t) {
         getContent(db0, function (err, res) {
           t.notOk(err)
           t.deepEquals(res, [
-            { key: '', value: '' },
-            { key: '/foo', value: 'bar' },
-            { key: '/bax', value: 'quux' }
+            { key: '', value: null },
+            { key: 'foo', value: 'bar' },
+            { key: 'bax', value: 'quux' }
+          ])
+
+          cleanup0()
+          cleanup1()
+        })
+      }
+    })
+  })
+})
+
+return
+
+test('existing local; fresh remote', function (t) {
+  var db1
+
+  emptyFixture(function (err, db0, dir0, cleanup0) {
+    t.notOk(err)
+    tmp(function (err, dir1, cleanup1) {
+      t.notOk(err)
+      populate()
+      dir1 = path.join(dir1, 'db')
+
+      function populate () {
+        db0.put('foo', 'bar', function (err) {
+          t.notOk(err)
+          sneaker(db0, dir1, function (err) {
+            t.notOk(err)
+            db1 = hyperdb(dir1, db0.key, {valueEncoding: 'json'})
+            db1.ready(check)
+          })
+        })
+      }
+
+      function check () {
+        getContent(db1, function (err, res) {
+          t.notOk(err)
+          t.deepEquals(res, [
+            { key: '', value: null },
+            { key: 'foo', value: 'bar' }
           ])
 
           cleanup0()
@@ -117,44 +155,6 @@ test('existing local; existing remote', function (t) {
 })
 
 /*
-
-test('existing local; fresh remote', function (t) {
-  t.plan(6)
-
-  fixture(function (err, db0, cleanup0) {
-    t.notOk(err)
-
-    tmp(function (err, dir, cleanup1) {
-      t.notOk(fs.existsSync(dir))
-
-      sneaker(db0, dir, function (err) {
-        t.notOk(err)
-        t.ok(fs.existsSync(dir))
-
-        var db1 = hyperdb(dir, db0.key)
-
-        // move below into a reusable function
-        // also have it check that the new hyperdb is authorized by doing a
-        // write + replicate + 'db.get()'
-
-        var idx = 0
-        db.createHistoryStream()
-          .on('data', function (node) {
-            if (idx === 0) {
-              t.equal(node.value.toString(), 'world')
-              idx++
-            } else if (idx === 1) {
-              t.equal(node.value.toString(), 'warld')
-              idx++
-            }
-          })
-
-        cleanup0()
-        cleanup1()
-      })
-    })
-  })
-})
 
 test('fresh local; existing remote', function (t) {
   t.plan(7)
