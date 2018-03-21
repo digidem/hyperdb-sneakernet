@@ -46,6 +46,24 @@ test('different shared keys', function (t) {
   })
 })
 
+// TODO: stop skipping this once https://github.com/mafintosh/hyperdb/issues/77 is fixed
+test.skip('neither db authorized to write', function (t) {
+  emptyFixture(function (err, db0, dir0, cleanup0) {
+    t.notOk(err)
+    emptyFixture(db0.key, function (err, db1, dir1, cleanup0) {
+      t.notOk(err)
+      emptyFixture(db0.key, function (err, db2, dir2, cleanup1) {
+        t.notOk(err)
+        replicate(db1, dir2, function (err) {
+          t.ok(err)
+          t.equals(err.message, 'neither feed is authorized to write')
+          t.end()
+        })
+      })
+    })
+  })
+})
+
 /*
 
 test('existing local; fresh remote', function (t) {
