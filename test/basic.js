@@ -1,4 +1,4 @@
-var replicate = require('..')
+var sneaker = require('..')
 var test = require('tape')
 var hyperdb = require('hyperdb')
 var tmp = require('tmp').dir
@@ -11,7 +11,7 @@ function emptyFixture (key, done) {
     key = null
   }
   var db = null
-  tmp(function (err, dir, cleanup) {
+  tmp({unsafeCleanup: true}, function (err, dir, cleanup) {
     if (err) return done(err)
     db = key ? hyperdb(dir, key) : hyperdb(dir)
     db.ready(function () {
@@ -37,9 +37,11 @@ test('different shared keys', function (t) {
     t.notOk(err)
     emptyFixture(function (err, db1, dir1, cleanup1) {
       t.notOk(err)
-      replicate(db0, dir1, function (err) {
+      sneaker(db0, dir1, function (err) {
         t.ok(err)
         t.equals(err.message, 'shared hyperdb keys do not match')
+        cleanup0()
+        cleanup1()
         t.end()
       })
     })
@@ -54,9 +56,11 @@ test.skip('neither db authorized to write', function (t) {
       t.notOk(err)
       emptyFixture(db0.key, function (err, db2, dir2, cleanup1) {
         t.notOk(err)
-        replicate(db1, dir2, function (err) {
+        sneaker(db1, dir2, function (err) {
           t.ok(err)
           t.equals(err.message, 'neither feed is authorized to write')
+          cleanup0()
+          cleanup1()
           t.end()
         })
       })
