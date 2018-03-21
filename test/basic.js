@@ -114,17 +114,15 @@ test('existing local; existing remote', function (t) {
   })
 })
 
-return
-
 test('existing local; fresh remote', function (t) {
   var db1
 
   emptyFixture(function (err, db0, dir0, cleanup0) {
     t.notOk(err)
-    tmp(function (err, dir1, cleanup1) {
+    tmp({unsafeCleanup: true}, function (err, dir1, cleanup1) {
       t.notOk(err)
-      populate()
       dir1 = path.join(dir1, 'db')
+      populate()
 
       function populate () {
         db0.put('foo', 'bar', function (err) {
@@ -141,8 +139,8 @@ test('existing local; fresh remote', function (t) {
         getContent(db1, function (err, res) {
           t.notOk(err)
           t.deepEquals(res, [
-            { key: '', value: null },
-            { key: 'foo', value: 'bar' }
+            { key: 'foo', value: 'bar' },
+            { key: '', value: null }
           ])
 
           cleanup0()
