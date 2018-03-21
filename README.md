@@ -6,11 +6,13 @@
 `hyperdb-sneakernet` stores a live hyperdb copy on a USB stick suitable for
 replicating with existing hyperdbs and also for authorizing new writers.
 
+If the target directory doesn't exist, a new hyperdb will be created there,
+authorized by the source hyperdb, and replicated to.
+
+If the target directory does exist, it will be authorized by the source hyperdb
+(if needed) and replicated with the source hyperdb.
+
 [hyperdb]: https://github.com/mafintosh/hyperdb
-
-## Status
-
-wip mad science; don't use for anything meaningful yet.
 
 ## Example
 
