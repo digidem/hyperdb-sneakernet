@@ -1,119 +1,73 @@
 var hyperdb = require('hyperdb')
-var tar = require('tar-fs')
-var fs = require('graceful-fs')
-var path = require('path')
-var tmpdir = require('os').tmpdir()
+var fs = require('fs')
 var onend = require('end-of-stream')
-var once = require('once')
-var gzip = require('zlib').createGzip
-var gunzip = require('zlib').createGunzip
-var pump = require('pump')
-var debug = require('debug')('hyperdb-sneakernet')
 
-module.exports = function (db, opts, outFile, cb_) {
-  if (typeof opts === 'string') {
-    cb_ = outFile
-    outFile = opts
+module.exports = function (local, dir, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
     opts = {}
   }
-  if (!outFile) outFile = opts.file
-  var xcb = cb_ || noop
-  var cb = once(function (err) {
-    if (err) debug(err)
-    if (dstdb) dstdb.close()
-    xcb.apply(this, arguments)
-  })
+  cb = cb || (function () {})
 
-  var tmpFile = path.join(tmpdir, 'sneakernet-' + Math.random())
-  var tgzFile = tmpFile + '.tgz'
-  var dstdb = null
-  var existing = false
+  var freshRemote = !fs.existsSync(dir)
+  var remote = freshRemote ? hyperdb(dir, local.key, local.valueEncoding) : hyperdb(dir, local.valueEncoding)
+
+  local.ready(function () {
+    remote.ready(function () {
+      // Bail if both local and remote shared keys don't match
+      if (!local.key.equals(remote.key)) {
+        return cb(new Error('shared hyperdb keys do not match'))
+      }
+
+      var localAuthorized = isSelfAuthorized(local)
+      var remoteAuthorized = isSelfAuthorized(remote)
+
+      if (localAuthorized && remoteAuthorized) {
+        // Existing local; existing remote
+        replicate(local, remote, cb)
+      } else if (!localAuthorized && remoteAuthorized) {
+        // Fresh local; existing remote
+        remote.authorize(local.local.key, function (err) {
+          if (err) return cb(err)
+          replicate(local, remote, cb)
+        })
+      } else if (localAuthorized && !remoteAuthorized) {
+        // Existing local; fresh remote
+        local.authorize(remote.local.key, function (err) {
+          if (err) return cb(err)
+          replicate(local, remote, cb)
+        })
+      } else {
+        // Neither feed is authorized
+        return cb(new Error('neither feed is authorized to write'))
+      }
+    })
+  })
+}
+
+// HyperDB, HyperDB => Error
+function replicate (local, remote, cb) {
+  var rr = remote.replicate()
+  var lr = local.replicate()
+  onend(rr, doneReplication)
+  onend(lr, doneReplication)
+  rr.pipe(lr).pipe(rr)
 
   var pending = 2
-
-  fs.stat(outFile, function (err, stat) {
-    if (err && err.code !== 'ENOENT') {
-      return cb(err)
-    }
-    if (stat) {
-      existing = true
-      pump(
-        fs.createReadStream(outFile),
-        gunzip(),
-        tar.extract(tmpFile, {
-          // all dirs and files should be readable + writable
-          readable: true,
-          writable: true
-        }),
-        function (err) {
-          if (err) return cb(err)
-          replicate()
-        })
-    } else replicate()
-  })
-
-  function replicate () {
-    var dst = hyperdb(tmpFile, db.key, { valueEncoding: db.valueEncoding })
-    var dr = dst.replicate()
-    var lr = db.replicate()
-    onend(dr, doneReplication)
-    onend(lr, doneReplication)
-    dr.pipe(lr).pipe(dr)
-  }
-
+  var error
   function doneReplication (err) {
-    if (err) {
-      return cb(err)
-    }
-    if (--pending !== 0) return
-
-    // dstdb.close(function () {
-      pump(
-        tar.pack(tmpFile, {
-          // all dirs and files should be readable + writable
-          readable: true,
-          writable: true,
-          // dereference symlinks (pack the contents of the symlink instead of the link itself)
-          dereference: true
-        }),
-        gzip(),
-        fs.createWriteStream(tgzFile),
-        function (err) {
-          if (err) return cb(err)
-          rename()
-        })
-    // })
-  }
-
-  function rename () {
-    if (!existing) {
-      copyFileToMedia()
-    } else if (!opts.safetyFile) {
-      debug('deleting existing file')
-      fs.unlink(outFile, copyFileToMedia)
-    } else {
-      debug('renaming existing file')
-      var tmpRemoteFile = outFile + ('' + Math.random()).substring(2, 7)
-      fs.rename(outFile, tmpRemoteFile, function (err) {
-        if (err) return cb(err)
-        debug('copying new file to media')
-        cp(tgzFile, outFile, function (err) {
-          if (err) return cb(err)
-          debug('deleting previous file')
-          fs.unlink(tmpRemoteFile, cb)
-        })
-      })
-    }
-    function copyFileToMedia (err) {
-      if (err) return cb(err)
-      debug('copying new file to media')
-      cp(tgzFile, outFile, cb)
-    }
+    if (err) error = err
+    if (--pending) return
+    cb(error)
   }
 }
 
-function noop () {}
+// HyperDB, Buffer -> Boolean
+function isSelfAuthorized (db) {
+  // soon
+  // return db.authorized(db.key)
 
-function cp (src, dst, cb) {
-  pump(fs.createReadStream(src), fs.createWriteStream(dst), cb)
+  return db._writers.reduce(function (accum, writer) {
+    return accum || writer.key.equals(db.key)
+  }, false)
 }
