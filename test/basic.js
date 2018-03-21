@@ -160,10 +160,8 @@ test('fresh local; existing remote', function (t) {
     t.notOk(err)
     emptyFixture(db0.key, function (err, db1, dir1, cleanup1) {
       t.notOk(err)
-      // replicate(db0, db1, function (err) {
-        // t.notOk(err)
-        populate()
-      // })
+
+      populate()
 
       function populate () {
         db0.put('foo', 'bar', function (err) {
