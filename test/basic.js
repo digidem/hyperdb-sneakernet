@@ -4,6 +4,7 @@ var hyperdb = require('hyperdb')
 var tmp = require('tmp').dir
 var path = require('path')
 var fs = require('fs')
+var onend = require('end-of-stream')
 
 function emptyFixture (key, done) {
   if (typeof key === 'function' && !done) {
@@ -13,7 +14,7 @@ function emptyFixture (key, done) {
   var db = null
   tmp({unsafeCleanup: true}, function (err, dir, cleanup) {
     if (err) return done(err)
-    db = key ? hyperdb(dir, key) : hyperdb(dir)
+    db = key ? hyperdb(dir, key, {valueEncoding: 'json'}) : hyperdb(dir, {valueEncoding: 'json'})
     db.ready(function () {
       done(null, db, dir, cleanup)
     })
@@ -68,6 +69,53 @@ test.skip('neither db authorized to write', function (t) {
   })
 })
 
+test('existing local; existing remote', function (t) {
+  var cb0, cb1
+
+  emptyFixture(function (err, db0, dir0, cleanup0) {
+    t.notOk(err)
+    emptyFixture(db0.key, function (err, db1, dir1, cleanup1) {
+      t.notOk(err)
+
+      db0.authorize(db1.local.key, function (err) {
+        t.notOk(err)
+        replicate(db0, db1, function (err) {
+          t.notOk(err)
+          populate()
+        })
+      })
+
+      function populate () {
+        db0.put('/foo', 'bar', function (err) {
+          t.notOk(err)
+          db1.put('/bax', 'quux', function (err) {
+            t.notOk(err)
+            sneaker(db0, dir1, function (err) {
+              t.notOk(err)
+              check()
+            })
+          })
+        })
+      }
+
+      function check () {
+        getContent(db0, function (err, res) {
+          t.notOk(err)
+          t.deepEquals(res, [
+            { key: '', value: '' },
+            { key: '/foo', value: 'bar' },
+            { key: '/bax', value: 'quux' }
+          ])
+
+          cleanup0()
+          cleanup1()
+          t.end()
+        })
+      }
+    })
+  })
+})
+
 /*
 
 test('existing local; fresh remote', function (t) {
@@ -79,7 +127,7 @@ test('existing local; fresh remote', function (t) {
     tmp(function (err, dir, cleanup1) {
       t.notOk(fs.existsSync(dir))
 
-      replicate(db0, dir, function (err) {
+      sneaker(db0, dir, function (err) {
         t.notOk(err)
         t.ok(fs.existsSync(dir))
 
@@ -119,7 +167,7 @@ test('fresh local; existing remote', function (t) {
       var tgz = path.join(dir, 'db.tar.gz')
       t.notOk(fs.existsSync(tgz))
 
-      replicate(db, tgz, function (err) {
+      sneaker(db, tgz, function (err) {
         t.notOk(err)
         t.ok(fs.existsSync(tgz))
 
@@ -132,7 +180,7 @@ test('fresh local; existing remote', function (t) {
     emptyFixture(origDb.key, function (err, db) {
       t.notOk(err)
 
-      replicate(db, tgz, function (err) {
+      sneaker(db, tgz, function (err) {
         var idx = 0
         db.createHistoryStream()
           .on('data', function (node) {
@@ -153,3 +201,30 @@ test('fresh local; existing remote', function (t) {
 // ...
 
 */
+
+// HyperDB, HyperDB => Error
+function replicate (local, remote, cb) {
+  var rr = remote.replicate()
+  var lr = local.replicate()
+  onend(rr, doneReplication)
+  onend(lr, doneReplication)
+  rr.pipe(lr).pipe(rr)
+
+  var pending = 2
+  var error
+  function doneReplication (err) {
+    if (err) error = err
+    if (--pending) return
+    cb(error)
+  }
+}
+
+function getContent (db, cb) {
+  var res = []
+  db.createHistoryStream()
+    .on('data', function (node) {
+      res.push({key: node.key, value: node.value})
+    })
+    .once('end', cb.bind(null, null, res))
+    .once('error', cb)
+}
